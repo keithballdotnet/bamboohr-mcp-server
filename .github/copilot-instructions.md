@@ -23,7 +23,7 @@ go run main.go
 
 **Testing Strategy**: Run `go test -v` for unit tests. Integration testing requires valid BambooHR credentials. Tests focus on client creation and validation, not API calls.
 
-**Building**: Use `go build` to create standalone binary. The server communicates via stdin/stdout following MCP protocol.
+**Building**: Use `go build -o .build/bamboohr-mcp-server` to create standalone binary in the `.build` folder. The server communicates via stdin/stdout following MCP protocol. Always build binaries to the `.build` directory to keep the project root clean.
 
 ## Project-Specific Conventions
 

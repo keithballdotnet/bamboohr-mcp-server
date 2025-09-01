@@ -171,8 +171,10 @@ The server provides detailed error messages for:
 ### Building
 
 ```bash
-go build -o bamboohr-mcp-server main.go
+go build -o .build/bamboohr-mcp-server
 ```
+
+The binary will be created in the `.build` folder to keep the project root clean.
 
 ### Testing
 

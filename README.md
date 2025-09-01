@@ -180,6 +180,41 @@ The binary will be created in the `.build` folder to keep the project root clean
 go test ./...
 ```
 
+### Building a Release
+
+To build binaries for macOS, Linux, and Windows, follow these steps:
+
+1. **Set Up Your Environment**:
+   - Ensure you have Go installed (version 1.21 or later).
+
+2. **Build the Binaries**:
+   - Run the following commands:
+     ```bash
+     go build -o .build/bamboohr-mcp-server-macos main.go
+     GOOS=linux GOARCH=amd64 go build -o .build/bamboohr-mcp-server-linux main.go
+     GOOS=windows GOARCH=amd64 go build -o .build/bamboohr-mcp-server-windows.exe main.go
+     ```
+
+3. **Verify the Binaries**:
+   - Ensure the binaries are created in the `.build` directory:
+     ```bash
+     ls .build
+     ```
+
+4. **Create a GitHub Release**:
+   - Use the GitHub CLI to create a release:
+     ```bash
+     gh release create v1.0.0 \
+       .build/bamboohr-mcp-server-macos#"macOS binary" \
+       .build/bamboohr-mcp-server-linux#"Linux binary" \
+       .build/bamboohr-mcp-server-windows.exe#"Windows binary" \
+       --title "BambooHR MCP Server v1.0.0" \
+       --notes "Initial release of the BambooHR MCP Server with binaries for macOS, Linux, and Windows."
+     ```
+
+5. **Publish the Release**:
+   - The release will be available on the [Releases Page](https://github.com/keithballdotnet/bamboohr-mcp-server/releases).
+
 ## Contributing
 
 1. Fork the repository
@@ -197,3 +232,32 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For issues and questions:
 - Check the BambooHR API documentation: https://documentation.bamboohr.com/
 - Create an issue in this repository
+
+## Releases
+
+We provide pre-built binaries for macOS, Linux, and Windows. You can download the latest release from the [Releases Page](https://github.com/keithballdotnet/bamboohr-mcp-server/releases).
+
+### Using the Binary
+
+1. **Download the Binary**
+   - Visit the [Releases Page](https://github.com/keithballdotnet/bamboohr-mcp-server/releases) and download the appropriate binary for your operating system.
+
+2. **Make the Binary Executable** (if required):
+   - On macOS/Linux:
+     ```bash
+     chmod +x bamboohr-mcp-server-<os>
+     ```
+
+3. **Run the Server**:
+   - Set the required environment variables:
+     ```bash
+     export BAMBOOHR_API_KEY="your_api_key"
+     export BAMBOOHR_COMPANY="your_company_subdomain"
+     ```
+   - Start the server:
+     ```bash
+     ./bamboohr-mcp-server-<os>
+     ```
+
+4. **Access the Server**:
+   - The server communicates via stdin/stdout following the MCP protocol.

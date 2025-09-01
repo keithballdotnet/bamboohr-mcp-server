@@ -256,10 +256,6 @@ func (c *BambooHRClient) CreateTimeOffRequest(employeeID int, request TimeOffReq
 		return nil, fmt.Errorf("marshaling request: %w", err)
 	}
 
-	// Debug: Print the JSON payload being sent
-	fmt.Printf("DEBUG: Sending JSON payload: %s\n", string(requestBody))
-	fmt.Printf("DEBUG: Endpoint: %s\n", endpoint)
-
 	resp, err := c.makeRequestV1("PUT", endpoint, strings.NewReader(string(requestBody)))
 	if err != nil {
 		return nil, fmt.Errorf("making request: %w", err)

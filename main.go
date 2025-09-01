@@ -42,7 +42,7 @@ type TimeOffRequest struct {
 		Unit   string        `json:"unit"`
 		Amount FlexibleFloat `json:"amount"`
 	} `json:"amount"`
-	Notes  map[string]string `json:"notes"`
+	Notes  []Note `json:"notes"`
 	Status struct {
 		Status          string `json:"status"`
 		LastChanged     string `json:"lastChanged"`
@@ -70,12 +70,28 @@ type TimeOffBalance struct {
 	UsedYearToDate FlexibleFloat `json:"usedYearToDate"`
 }
 
+// Note represents a note in the time-off request
+type Note struct {
+	From string `json:"from"`
+	Note string `json:"note"`
+}
+
+// DateAmount represents a date with an amount for the time-off request
+type DateAmount struct {
+	YMD    string `json:"ymd"`
+	Amount int    `json:"amount"`
+}
+
 // TimeOffRequestCreate represents the payload for creating a time-off request
 type TimeOffRequestCreate struct {
-	TimeOffTypeID string `json:"timeOffTypeId"`
-	Start         string `json:"start"`
-	End           string `json:"end"`
-	EmployeeNote  string `json:"employeeNote,omitempty"`
+	Status          string       `json:"status,omitempty"`
+	Start           string       `json:"start"`
+	End             string       `json:"end"`
+	TimeOffTypeID   int          `json:"timeOffTypeId"`
+	Amount          int          `json:"amount,omitempty"`
+	Notes           []Note       `json:"notes,omitempty"`
+	Dates           []DateAmount `json:"dates,omitempty"`
+	PreviousRequest int          `json:"previousRequest,omitempty"`
 }
 
 // FlexibleFloat can unmarshal both string and float64 values
@@ -240,6 +256,10 @@ func (c *BambooHRClient) CreateTimeOffRequest(employeeID int, request TimeOffReq
 		return nil, fmt.Errorf("marshaling request: %w", err)
 	}
 
+	// Debug: Print the JSON payload being sent
+	fmt.Printf("DEBUG: Sending JSON payload: %s\n", string(requestBody))
+	fmt.Printf("DEBUG: Endpoint: %s\n", endpoint)
+
 	resp, err := c.makeRequestV1("PUT", endpoint, strings.NewReader(string(requestBody)))
 	if err != nil {
 		return nil, fmt.Errorf("making request: %w", err)
@@ -356,9 +376,14 @@ func handleCreateTimeOffRequest(client *BambooHRClient) server.ToolHandlerFunc {
 			return mcp.NewToolResultError("employeeId must be a valid integer"), nil
 		}
 
-		timeOffTypeID, err := request.RequireString("timeOffTypeId")
+		timeOffTypeIDStr, err := request.RequireString("timeOffTypeId")
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("timeOffTypeId is required: %s", err.Error())), nil
+		}
+
+		timeOffTypeID, err := strconv.Atoi(timeOffTypeIDStr)
+		if err != nil {
+			return mcp.NewToolResultError("timeOffTypeId must be a valid integer"), nil
 		}
 
 		startDate, err := request.RequireString("start")
@@ -374,12 +399,38 @@ func handleCreateTimeOffRequest(client *BambooHRClient) server.ToolHandlerFunc {
 		// Optional employee note - for now we'll keep it empty if not provided
 		employeeNote := request.GetString("employeeNote", "")
 
+		// Get amount (required for the API)
+		amountStr := request.GetString("amount", "1")
+		amount, err := strconv.Atoi(amountStr)
+		if err != nil {
+			return mcp.NewToolResultError("amount must be a valid integer"), nil
+		}
+
+		// Create notes array if we have an employee note
+		var notes []Note
+		if employeeNote != "" {
+			notes = append(notes, Note{
+				From: "employee",
+				Note: employeeNote,
+			})
+		}
+
+		// Create dates array for the request period
+		var dates []DateAmount
+		dates = append(dates, DateAmount{
+			YMD:    startDate,
+			Amount: amount,
+		})
+
 		// Create the request payload
 		timeOffRequest := TimeOffRequestCreate{
-			TimeOffTypeID: timeOffTypeID,
+			Status:        "requested",
 			Start:         startDate,
 			End:           endDate,
-			EmployeeNote:  employeeNote,
+			TimeOffTypeID: timeOffTypeID,
+			Amount:        amount,
+			Notes:         notes,
+			Dates:         dates,
 		}
 
 		createdRequest, err := client.CreateTimeOffRequest(employeeID, timeOffRequest)
@@ -478,6 +529,9 @@ func main() {
 		mcp.WithString("end",
 			mcp.Required(),
 			mcp.Description("End date for the time-off request (YYYY-MM-DD format)"),
+		),
+		mcp.WithString("amount",
+			mcp.Description("The amount of time off in days (e.g., '1', '0.5', '2.5')"),
 		),
 		mcp.WithString("employeeNote",
 			mcp.Description("Optional note from the employee about the request"),

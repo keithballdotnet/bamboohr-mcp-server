@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "bamboohr": {
+      "command": "go",
+      "args": ["run", "main.go"],
+      "cwd": "/Users/keithball/Projects/bamboohr_mcp_server",
+      "env": {
+        "BAMBOOHR_API_KEY": "your_api_key_here",
+        "BAMBOOHR_COMPANY": "your_company_subdomain"
+      }
+    }
+  }
+}

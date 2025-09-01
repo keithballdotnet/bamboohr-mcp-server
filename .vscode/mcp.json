@@ -7,7 +7,7 @@
     "bamboohr": {
       "command": "./.build/bamboohr-mcp-server",
       "env": {
-        "BAMBOOHR_COMPANY": "proglove",
+        "BAMBOOHR_COMPANY": "YOUR_COMPANY",
         "BAMBOOHR_API_KEY": "YOUR_API_KEY"
       },
       "args": []

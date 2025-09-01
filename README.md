@@ -261,4 +261,3 @@ We provide pre-built binaries for macOS, Linux, and Windows. You can download th
 
 4. **Access the Server**:
    - The server communicates via stdin/stdout following the MCP protocol.
-# Test pre-commit hook

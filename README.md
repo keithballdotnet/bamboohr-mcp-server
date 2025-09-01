@@ -95,7 +95,7 @@ For VS Code with the MCP extension, use the configuration file `.vscode/mcp.json
 }
 ```
 
-**Note**: Replace `YOUR_API_KEY` with your actual BambooHR API key. The repository includes a pre-commit hook that automatically replaces the API key with a placeholder when committing to prevent accidental exposure of sensitive credentials.
+**Note**: Replace `YOUR_API_KEY` with your actual BambooHR API key and `YOUR_COMPANY` with your company subdomain. The repository includes a pre-commit hook that automatically replaces both sensitive values with placeholders when committing to prevent accidental exposure of credentials.
 
 ## Example Usage
 

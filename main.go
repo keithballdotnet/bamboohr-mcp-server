@@ -42,7 +42,7 @@ type TimeOffRequest struct {
 		Unit   string        `json:"unit"`
 		Amount FlexibleFloat `json:"amount"`
 	} `json:"amount"`
-	Notes  []Note `json:"notes"`
+	Notes  FlexibleNotes `json:"notes"`
 	Status struct {
 		Status          string `json:"status"`
 		LastChanged     string `json:"lastChanged"`
@@ -74,6 +74,63 @@ type TimeOffBalance struct {
 type Note struct {
 	From string `json:"from"`
 	Note string `json:"note"`
+}
+
+// FlexibleNotes can handle string, object, or array of notes from the BambooHR API
+type FlexibleNotes struct {
+	Notes []Note
+}
+
+// UnmarshalJSON handles different formats of notes from the BambooHR API
+func (fn *FlexibleNotes) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as a simple string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		// If it's a string, create a single note entry
+		fn.Notes = []Note{{Note: str}}
+		return nil
+	}
+
+	// Try to unmarshal as an array of Note objects
+	var notes []Note
+	if err := json.Unmarshal(data, &notes); err == nil {
+		fn.Notes = notes
+		return nil
+	}
+
+	// Try to unmarshal as a generic object first (before trying as a Note)
+	var obj map[string]interface{}
+	if err := json.Unmarshal(data, &obj); err == nil {
+		// Check if it looks like a Note object (has "from" and/or "note" keys)
+		if _, hasFrom := obj["from"]; hasFrom || obj["note"] != nil {
+			// Try to unmarshal as a single Note object
+			var note Note
+			if err := json.Unmarshal(data, &note); err == nil {
+				fn.Notes = []Note{note}
+				return nil
+			}
+		}
+
+		// Convert the generic object to a note representation
+		noteText := ""
+		for key, value := range obj {
+			if str, ok := value.(string); ok {
+				if noteText != "" {
+					noteText += "; "
+				}
+				noteText += fmt.Sprintf("%s: %s", key, str)
+			}
+		}
+		fn.Notes = []Note{{Note: noteText}}
+		return nil
+	}
+
+	return fmt.Errorf("cannot unmarshal notes field")
+}
+
+// MarshalJSON converts FlexibleNotes back to JSON
+func (fn FlexibleNotes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(fn.Notes)
 }
 
 // DateAmount represents a date with an amount for the time-off request

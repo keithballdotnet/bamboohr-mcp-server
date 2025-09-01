@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -255,12 +256,12 @@ func TestTimeOffRequest_JSONStructure(t *testing.T) {
 		t.Errorf("Expected type name 'Home Office days', got %s", request.Type.Name)
 	}
 
-	if len(request.Notes) != 1 {
-		t.Errorf("Expected 1 note, got %d", len(request.Notes))
+	if len(request.Notes.Notes) != 1 {
+		t.Errorf("Expected 1 note, got %d", len(request.Notes.Notes))
 	}
 
-	if request.Notes[0].Note != "Home office day" {
-		t.Errorf("Expected note 'Home office day', got %s", request.Notes[0].Note)
+	if request.Notes.Notes[0].Note != "Home office day" {
+		t.Errorf("Expected note 'Home office day', got %s", request.Notes.Notes[0].Note)
 	}
 }
 
@@ -559,5 +560,154 @@ func TestVersion(t *testing.T) {
 	// Version should be in format X.Y.Z
 	if len(Version) < 5 {
 		t.Errorf("Version '%s' seems too short", Version)
+	}
+}
+
+func TestFlexibleNotes_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []Note
+	}{
+		{
+			name:     "Simple string",
+			input:    `"Family vacation"`,
+			expected: []Note{{Note: "Family vacation"}},
+		},
+		{
+			name:  "Array of Note objects",
+			input: `[{"from": "employee", "note": "Home office day"}, {"from": "manager", "note": "Approved"}]`,
+			expected: []Note{
+				{From: "employee", Note: "Home office day"},
+				{From: "manager", Note: "Approved"},
+			},
+		},
+		{
+			name:     "Single Note object",
+			input:    `{"from": "employee", "note": "Sick day"}`,
+			expected: []Note{{From: "employee", Note: "Sick day"}},
+		},
+		{
+			name:  "Generic object",
+			input: `{"reason": "vacation", "duration": "1 week"}`,
+			// Note: map iteration order is not guaranteed, so we'll check if it contains both key-value pairs
+			expected: []Note{{Note: ""}}, // We'll check this differently
+		},
+		{
+			name:     "Empty string",
+			input:    `""`,
+			expected: []Note{{Note: ""}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var notes FlexibleNotes
+			err := json.Unmarshal([]byte(tt.input), &notes)
+			if err != nil {
+				t.Errorf("Failed to unmarshal: %v", err)
+				return
+			}
+
+			if len(notes.Notes) != len(tt.expected) {
+				t.Errorf("Expected %d notes, got %d", len(tt.expected), len(notes.Notes))
+				return
+			}
+
+			for i, expected := range tt.expected {
+				if tt.name == "Generic object" {
+					// Special case for generic object - check if it contains both key-value pairs
+					noteText := notes.Notes[i].Note
+					if !strings.Contains(noteText, "reason: vacation") || !strings.Contains(noteText, "duration: 1 week") {
+						t.Errorf("Note %d: expected to contain both 'reason: vacation' and 'duration: 1 week', got '%s'", i, noteText)
+					}
+					continue
+				}
+				if notes.Notes[i].From != expected.From {
+					t.Errorf("Note %d: expected From '%s', got '%s'", i, expected.From, notes.Notes[i].From)
+				}
+				if notes.Notes[i].Note != expected.Note {
+					t.Errorf("Note %d: expected Note '%s', got '%s'", i, expected.Note, notes.Notes[i].Note)
+				}
+			}
+		})
+	}
+}
+
+func TestFlexibleNotes_MarshalJSON(t *testing.T) {
+	notes := FlexibleNotes{
+		Notes: []Note{
+			{From: "employee", Note: "Test note"},
+		},
+	}
+
+	data, err := json.Marshal(notes)
+	if err != nil {
+		t.Errorf("Failed to marshal: %v", err)
+	}
+
+	expected := `[{"from":"employee","note":"Test note"}]`
+	if string(data) != expected {
+		t.Errorf("Expected %s, got %s", expected, string(data))
+	}
+}
+
+// Test the specific scenario that was causing the original error
+func TestTimeOffRequest_ObjectNotesField(t *testing.T) {
+	// This simulates the actual API response that was causing the error:
+	// "json: cannot unmarshal object into Go struct field TimeOffRequest.notes of type []main.Note"
+	responseJSON := `{
+		"id": "12345",
+		"employeeId": "157",
+		"name": "John Doe",
+		"start": "2025-09-05",
+		"end": "2025-09-05",
+		"created": "2025-09-01",
+		"type": {
+			"id": "27",
+			"name": "Home Office days",
+			"icon": ""
+		},
+		"amount": {
+			"unit": "days",
+			"amount": 1
+		},
+		"notes": {
+			"employee": "Working from home today",
+			"reason": "personal"
+		},
+		"status": {
+			"status": "requested",
+			"lastChanged": "2025-09-01 14:23:47",
+			"lastChangedByUserId": "2627"
+		},
+		"actions": {
+			"view": true,
+			"edit": false,
+			"cancel": true,
+			"approve": false,
+			"deny": false,
+			"bypass": false
+		},
+		"dates": {
+			"2025-09-05": "1"
+		}
+	}`
+
+	var request TimeOffRequest
+	err := json.Unmarshal([]byte(responseJSON), &request)
+	if err != nil {
+		t.Errorf("Failed to unmarshal TimeOffRequest with object notes: %v", err)
+	}
+
+	// Verify that the object was converted to a note
+	if len(request.Notes.Notes) != 1 {
+		t.Errorf("Expected 1 note, got %d", len(request.Notes.Notes))
+	}
+
+	noteText := request.Notes.Notes[0].Note
+	// Should contain both key-value pairs from the object
+	if !strings.Contains(noteText, "employee: Working from home today") || !strings.Contains(noteText, "reason: personal") {
+		t.Errorf("Expected note to contain both object fields, got: %s", noteText)
 	}
 }

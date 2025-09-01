@@ -125,6 +125,63 @@ Get the current time-off balance for an employee:
 ]
 ```
 
+### 4. Create Time-Off Request
+
+Create a new time-off request for an employee:
+
+```json
+{
+  "tool": "create_time_off_request",
+  "arguments": {
+    "employeeId": "123",
+    "timeOffTypeId": "1",
+    "start": "2024-12-23",
+    "end": "2024-12-23",
+    "employeeNote": "Personal day off"
+  }
+}
+```
+
+**Expected Response:**
+```json
+{
+  "id": "12345",
+  "employeeId": "123",
+  "name": "John Doe",
+  "start": "2024-12-23",
+  "end": "2024-12-23",
+  "type": {
+    "id": "1",
+    "name": "Vacation",
+    "icon": "palm-trees"
+  },
+  "amount": {
+    "unit": "days",
+    "amount": 1
+  },
+  "status": {
+    "status": "approved",
+    "lastChanged": "2024-12-01"
+  }
+}
+```
+
+**Time-Off Type IDs (common values):**
+- `"1"` - Vacation
+- `"2"` - Sick Days  
+- `"5"` - Sick Day Child
+- `"19"` - Mobile work from abroad
+- `"27"` - Home Office days
+
+**Required Arguments:**
+- `employeeId`: The numeric ID of the employee
+- `timeOffTypeId`: The ID of the time-off type (see list above)
+- `start`: Start date in YYYY-MM-DD format
+- `end`: End date in YYYY-MM-DD format
+
+**Optional Arguments:**
+- `employeeNote`: A note from the employee about the request
+
 ## Common Use Cases
 
 ### 1. Check Employee Time-Off Status
@@ -144,6 +201,29 @@ Get the current time-off balance for an employee:
 1. Get time-off data for all employees
 2. Analyze patterns and usage
 3. Generate reports for management
+
+### 4. Create Time-Off Requests
+
+1. Find your employee ID using `list_employees`
+2. Choose the appropriate time-off type ID
+3. Create the request with start/end dates
+4. Add optional notes if needed
+
+**Example: Booking Home Office days for all Fridays in October:**
+```json
+{
+  "tool": "create_time_off_request",
+  "arguments": {
+    "employeeId": "157",
+    "timeOffTypeId": "27",
+    "start": "2025-10-03",
+    "end": "2025-10-03",
+    "employeeNote": "Friday home office"
+  }
+}
+```
+
+Repeat for each Friday: Oct 10, 17, 24, 31.
 
 ## Error Handling
 

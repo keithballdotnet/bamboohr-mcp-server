@@ -20,12 +20,10 @@ This server provides the following tools:
 
 4. **create_time_off_request** - Create a new time-off request for an employee
    - `employeeId` (required): The ID of the employee to create the time-off request for
+   - `timeOffTypeId` (required): The ID of the time-off type (e.g., '1' for Vacation, '27' for Home Office days)
    - `start` (required): Start date for the time-off request (YYYY-MM-DD format)
    - `end` (required): End date for the time-off request (YYYY-MM-DD format)
-   - `timeOffTypeId` (required): The ID of the time-off type (e.g., '1' for Vacation, '2' for Sick Days, '27' for Home Office days)
-   - `amount` (required): The amount of time off in days (e.g., '1', '0.5', '2.5')
-   - `notes` (optional): Optional notes for the time-off request
-   - `skipManagerApproval` (optional): Whether to skip manager approval (true/false, default: false)
+   - `employeeNote` (optional): Optional note from the employee about the request
 
 ## Setup
 

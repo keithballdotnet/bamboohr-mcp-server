@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -65,6 +66,14 @@ type TimeOffBalance struct {
 	End            string        `json:"end"`
 	PolicyType     string        `json:"policyType"`
 	UsedYearToDate FlexibleFloat `json:"usedYearToDate"`
+}
+
+// TimeOffRequestCreate represents the payload for creating a time-off request
+type TimeOffRequestCreate struct {
+	TimeOffTypeID string `json:"timeOffTypeId"`
+	Start         string `json:"start"`
+	End           string `json:"end"`
+	EmployeeNote  string `json:"employeeNote,omitempty"`
 }
 
 // FlexibleFloat can unmarshal both string and float64 values
@@ -155,14 +164,6 @@ func (c *BambooHRClient) makeRequestV1(method, endpoint string, body io.Reader) 
 	return c.HTTPClient.Do(req)
 }
 
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // GetTimeOffRequests retrieves time-off requests for a given employee
 func (c *BambooHRClient) GetTimeOffRequests(employeeID int, start, end string) ([]TimeOffRequest, error) {
 	// Default to current year if no dates provided
@@ -225,6 +226,39 @@ func (c *BambooHRClient) GetTimeOffBalance(employeeID int) ([]TimeOffBalance, er
 	}
 
 	return balances, nil
+}
+
+// CreateTimeOffRequest creates a new time-off request for an employee
+func (c *BambooHRClient) CreateTimeOffRequest(employeeID int, request TimeOffRequestCreate) (*TimeOffRequest, error) {
+	endpoint := fmt.Sprintf("/employees/%d/time_off/request", employeeID)
+
+	// Marshal the request to JSON
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling request: %w", err)
+	}
+
+	resp, err := c.makeRequestV1("PUT", endpoint, strings.NewReader(string(requestBody)))
+	if err != nil {
+		return nil, fmt.Errorf("making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+	}
+
+	var createdRequest TimeOffRequest
+	if err := json.Unmarshal(body, &createdRequest); err != nil {
+		return nil, fmt.Errorf("decoding response: %w", err)
+	}
+
+	return &createdRequest, nil
 }
 
 // Tool handlers
@@ -308,6 +342,58 @@ func handleListEmployees(client *BambooHRClient) server.ToolHandlerFunc {
 	}
 }
 
+func handleCreateTimeOffRequest(client *BambooHRClient) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		employeeIDStr, err := request.RequireString("employeeId")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("employeeId is required: %s", err.Error())), nil
+		}
+
+		employeeID, err := strconv.Atoi(employeeIDStr)
+		if err != nil {
+			return mcp.NewToolResultError("employeeId must be a valid integer"), nil
+		}
+
+		timeOffTypeID, err := request.RequireString("timeOffTypeId")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("timeOffTypeId is required: %s", err.Error())), nil
+		}
+
+		startDate, err := request.RequireString("start")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("start date is required: %s", err.Error())), nil
+		}
+
+		endDate, err := request.RequireString("end")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("end date is required: %s", err.Error())), nil
+		}
+
+		// Optional employee note - for now we'll keep it empty if not provided
+		employeeNote := request.GetString("employeeNote", "")
+
+		// Create the request payload
+		timeOffRequest := TimeOffRequestCreate{
+			TimeOffTypeID: timeOffTypeID,
+			Start:         startDate,
+			End:           endDate,
+			EmployeeNote:  employeeNote,
+		}
+
+		createdRequest, err := client.CreateTimeOffRequest(employeeID, timeOffRequest)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create time-off request: %s", err.Error())), nil
+		}
+
+		data, err := json.MarshalIndent(createdRequest, "", "  ")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal response: %s", err.Error())), nil
+		}
+
+		return mcp.NewToolResultText(string(data)), nil
+	}
+}
+
 func main() {
 	// Get configuration from environment variables
 	apiKey := os.Getenv("BAMBOOHR_API_KEY")
@@ -363,10 +449,35 @@ func main() {
 		mcp.WithDescription("List all employees in the company directory"),
 	)
 
+	createTimeOffRequestTool := mcp.NewTool(
+		"create_time_off_request",
+		mcp.WithDescription("Create a new time-off request for an employee"),
+		mcp.WithString("employeeId",
+			mcp.Required(),
+			mcp.Description("The ID of the employee to create the time-off request for"),
+		),
+		mcp.WithString("timeOffTypeId",
+			mcp.Required(),
+			mcp.Description("The ID of the time-off type (e.g., '1' for Vacation, '27' for Home Office days)"),
+		),
+		mcp.WithString("start",
+			mcp.Required(),
+			mcp.Description("Start date for the time-off request (YYYY-MM-DD format)"),
+		),
+		mcp.WithString("end",
+			mcp.Required(),
+			mcp.Description("End date for the time-off request (YYYY-MM-DD format)"),
+		),
+		mcp.WithString("employeeNote",
+			mcp.Description("Optional note from the employee about the request"),
+		),
+	)
+
 	// Add tools to server
 	s.AddTool(getTimeOffRequestsTool, handleGetTimeOffRequests(client))
 	s.AddTool(getTimeOffBalanceTool, handleGetTimeOffBalance(client))
 	s.AddTool(listEmployeesTool, handleListEmployees(client))
+	s.AddTool(createTimeOffRequestTool, handleCreateTimeOffRequest(client))
 
 	// Start the server
 	if err := server.ServeStdio(s); err != nil {

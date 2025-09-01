@@ -105,15 +105,15 @@ Once configured, you can use the tools through your MCP client:
 
 ### Getting Time-Off Requests
 ```
-Get all time-off requests for employee 157 in 2025
+Get all time-off requests for employee {employeeId} in 2025
 ```
 
 ### Creating a Time-Off Request
 ```
-Create a home office day request for September 5th, 2025 for employee 157
+Create a home office day request for September 5th, 2025 for employee {employeeId}
 ```
 This will use:
-- `employeeId`: "157"
+- `employeeId`: "{employeeId}"
 - `start`: "2025-09-05"
 - `end`: "2025-09-05"
 - `timeOffTypeId`: "27" (Home Office days)

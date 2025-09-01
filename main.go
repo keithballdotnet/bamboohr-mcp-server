@@ -15,6 +15,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+const Version = "1.0.0"
+
 // BambooHRClient represents a client for the BambooHR API
 type BambooHRClient struct {
 	BaseURL    string
@@ -395,6 +397,15 @@ func handleCreateTimeOffRequest(client *BambooHRClient) server.ToolHandlerFunc {
 }
 
 func main() {
+	// Check for version flag
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		fmt.Printf("BambooHR MCP Server v%s\n", Version)
+		os.Exit(0)
+	}
+
+	// Print version information
+	fmt.Fprintf(os.Stderr, "BambooHR MCP Server v%s starting...\n", Version)
+
 	// Get configuration from environment variables
 	apiKey := os.Getenv("BAMBOOHR_API_KEY")
 	company := os.Getenv("BAMBOOHR_COMPANY")
@@ -415,7 +426,7 @@ func main() {
 	// Create MCP server
 	s := server.NewMCPServer(
 		"BambooHR Time-Off MCP Server",
-		"1.0.0",
+		Version,
 		server.WithToolCapabilities(true),
 	)
 

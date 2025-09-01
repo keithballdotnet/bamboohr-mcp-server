@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Path to the mcp.json file
+MCP_FILE=".vscode/mcp.json"
+
+# Temporary file to store the original content
+TEMP_FILE=".vscode/mcp.json.bak"
+
+# Replace the API key and company with placeholders
+sed -i.bak \
+    -e 's/"BAMBOOHR_API_KEY": ".*"/"BAMBOOHR_API_KEY": "YOUR_API_KEY"/' \
+    -e 's/"BAMBOOHR_COMPANY": ".*"/"BAMBOOHR_COMPANY": "YOUR_COMPANY"/' \
+    "$MCP_FILE"
+
+# Add the file to the commit
+git add "$MCP_FILE"
+
+# Restore the original file after staging
+mv "$TEMP_FILE" "$MCP_FILE"
+
+exit 0

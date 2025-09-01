@@ -37,16 +37,21 @@ This server provides the following tools:
 
 1. Clone this repository:
 ```bash
-git clone <repository-url>
-cd bamboohr_mcp_server
+git clone https://github.com/keithballdotnet/bamboohr-mcp-server.git
+cd bamboohr-mcp-server
 ```
 
-2. Install dependencies:
+2. Run the setup script to install Git hooks:
+```bash
+./scripts/setup.sh
+```
+
+3. Install dependencies:
 ```bash
 go mod tidy
 ```
 
-3. Set up environment variables:
+4. Set up environment variables:
 ```bash
 export BAMBOOHR_API_KEY="your_api_key_here"
 export BAMBOOHR_COMPANY="your_company_subdomain"
@@ -95,7 +100,7 @@ For VS Code with the MCP extension, use the configuration file `.vscode/mcp.json
 }
 ```
 
-**Note**: Replace `YOUR_API_KEY` with your actual BambooHR API key and `YOUR_COMPANY` with your company subdomain. The repository includes a pre-commit hook that automatically replaces both sensitive values with placeholders when committing to prevent accidental exposure of credentials.
+**Note**: Replace `YOUR_API_KEY` with your actual BambooHR API key and `YOUR_COMPANY` with your company subdomain. The repository includes a pre-commit hook (installed via `./scripts/setup.sh`) that automatically replaces both sensitive values with placeholders when committing to prevent accidental exposure of credentials.
 
 ## Example Usage
 

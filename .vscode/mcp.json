@@ -1,0 +1,16 @@
+{
+  "inputs": [],
+  "servers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "bamboohr": {
+      "command": "./bamboohr-mcp-server",
+      "env": {
+        "BAMBOOHR_COMPANY": "proglove",
+        "BAMBOOHR_API_KEY": "YOUR_API_KEY"
+      },
+      "args": []
+    },
+  }
+}

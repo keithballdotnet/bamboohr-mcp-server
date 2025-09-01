@@ -24,7 +24,6 @@ go.work
 .env.production
 
 # IDE files
-.vscode/
 .idea/
 *.swp
 *.swo
